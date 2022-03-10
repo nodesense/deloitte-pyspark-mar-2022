@@ -148,6 +148,7 @@ mostPopularDf = ratingDf\
                 .sort(desc("total_ratings"))\
                 .filter(col("total_ratings") >= 100)
 
+mostPopularDf.cache()
 
 mostPopularDf.show(5)
 
@@ -166,6 +167,7 @@ mostPopularMovies.show(3)
 # COMMAND ----------
 
 # cache the data
+mostPopularMovies = mostPopularMovies.coalesce(1)
 mostPopularMovies.cache()
 
 # COMMAND ----------
@@ -240,6 +242,45 @@ popularMoviesOrcDf = spark.read.format("orc")\
 
 popularMoviesParquetDf.printSchema()
 popularMoviesParquetDf.show(2)
+
+# COMMAND ----------
+
+# write teh popular movies to JDBC
+# note that you a table create in S100 popular_movies
+mostPopularMovies.write\
+.mode("append")\
+.format("jdbc")\
+.option("url", "jdbc:derby:memory:myDB;create=true")\
+.option("driver", "org.apache.derby.jdbc.EmbeddedDriver")\
+.option("dbtable", "popular_movies")\
+ .save()
+
+
+# COMMAND ----------
+
+# read data from jdbc to dataframe
+# inferSchema not needed for jdbc, database already has schema, spark can schema from db
+popularMoviesJdbcDf = spark.read.format("jdbc")\
+                      .option("url", "jdbc:derby:memory:myDB;create=true")\
+                      .option("driver", "org.apache.derby.jdbc.EmbeddedDriver")\
+                      .option("dbtable", "popular_movies")\
+                      .load()
+
+popularMoviesJdbcDf.printSchema()
+
+# COMMAND ----------
+
+popularMoviesJdbcDf.show(10)
+
+# COMMAND ----------
+
+popularMoviesJdbcDf.createOrReplaceTempView("popular_movies_jdbc")
+
+# COMMAND ----------
+
+# MAGIC %sql
+# MAGIC 
+# MAGIC SELECT * FROM popular_movies_jdbc
 
 # COMMAND ----------
 
